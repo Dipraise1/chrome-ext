@@ -1,5 +1,8 @@
 // UI elements
 const startBtn = document.getElementById("startBtn");
+const openChartBtn = document.getElementById("openChartBtn");
+const manualInput = document.getElementById("manualInput");
+const submitManualBtn = document.getElementById("submitManualBtn");
 const result = document.getElementById("result");
 const processing = document.getElementById("processing");
 
@@ -11,6 +14,13 @@ if (typeof SpeechRecognition === "undefined") {
 } else {
   let recognition = new SpeechRecognition();
   let voices = [];
+
+
+
+
+  openChartBtn.addEventListener("click", () => {
+    window.open("https://dexscreener.com/ethereum/0x88a3a913626803261de234c23c76523699caed8d", "_blank", "noopener");
+  });
 
   // Wait for voices to be loaded before fetching list
   window.speechSynthesis.onvoiceschanged = () => {
@@ -42,7 +52,7 @@ if (typeof SpeechRecognition === "undefined") {
 
       const response = process(recognitionText);
       const p = document.createElement("p");
-      p.innerHTML = `<strong>You said:</strong> ${recognitionText} <br><strong>Sonya said:</strong> ${response}`;
+      p.innerHTML = `<strong>You said:</strong> ${recognitionText} <br><strong>Soai :</strong> ${response}`;
       processing.textContent = "";
       result.appendChild(p);
 
@@ -52,7 +62,18 @@ if (typeof SpeechRecognition === "undefined") {
     }
   };
 }
-
+// Manual input submit button click event
+submitManualBtn.addEventListener("click", () => {
+  const manualCommand = manualInput.value.trim().toLowerCase();
+  if (manualCommand) {
+    const response = process(manualCommand);
+    const p = document.createElement("p");
+    p.innerHTML = `<strong>Manual Input:</strong> ${manualCommand} <br><strong>Soai :</strong> ${response}`;
+    result.appendChild(p);
+    manualInput.value = "";
+    readOutLoud(response);
+  }
+});
 // Processor function
 function process(text) {
   let response = null;
@@ -60,7 +81,7 @@ function process(text) {
   if (text.includes("hello") || text === "hi" || text.includes("hey")) {
     response = getRandomItemFromArray(hello);
   } else if (text.includes("yourname")) {
-    response = "My name's Sonya.";
+    response = "My name's Soai.";
   } else if (text.includes("howareyou") || text.includes("whatsup")) {
     response = "I'm fine. How about you?";
   } else if (text.includes("whattimeisit")) {
@@ -75,6 +96,9 @@ function process(text) {
   } else if (text.includes("bye") || text.includes("stop")) {
     response = "Bye!!";
     toggleRecognition();
+  } else if (text.includes("open soai on dexscreener")) {
+    response = "Opening SOAI on Dexscreener";
+    window.open("https://dexscreener.com/ethereum/0x88a3a913626803261de234c23c76523699caed8d", "_blank", "noopener");
   }
 
   if (!response) {
