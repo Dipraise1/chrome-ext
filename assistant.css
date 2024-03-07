@@ -1,0 +1,86 @@
+* { 
+  font-family: Helvetica Neue, Helvetica, Arial, sans-serif;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background-color: black; /* Dark purple background */
+  color: white; /* White text color */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh; /* Make the container take up the entire viewport height */
+}
+
+.container {
+  text-align: center;
+}
+
+span {
+  background: radial-gradient(
+  circle at 100%,
+  #b2a8fd,
+  #8678f9 50%,
+  #c7d2fe 75%,
+  #9a8dfd 75%
+  );
+  font-weight: 600;
+  background-size: 200% auto;
+  color: #000;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: animatedTextGradient 1.5s linear infinite;
+}
+
+@keyframes animatedTextGradient {
+  to {
+  background-position: 200% center;
+  }
+}
+
+#mic-container {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  margin: 0 auto;
+  cursor: pointer;
+}
+
+#mic {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: auto;
+  width: 80px;
+  height: 80px;
+  transition: transform 0.2s ease-in-out;
+}
+
+#mic:hover {
+  transform: scale(1.1); /* Increase size on hover */
+}
+
+#output {
+  margin-top: 20px;
+  font-weight: bold;
+}
+
+#mic {
+  position: absolute;
+  top: 300px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: auto;
+  width: 80px;
+  height: 80px;
+  transition: transform 0.2s ease-in-out, opacity 0.5s ease-in-out;
+  animation: pulse 1.5s infinite alternate; /* Animation */
+}
+
+@keyframes pulse {
+  from { transform: scale(1); }
+  to { transform: scale(1.1); }
+}
