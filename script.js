@@ -131,6 +131,21 @@ function readOutLoud(message) {
 
   window.speechSynthesis.speak(speech);
 }
+$(document).ready(function(){
+  navigator.mediaDevices.getUserMedia({audio: true})
+});
+// Ask for microphone permission when the page loads
+document.addEventListener("DOMContentLoaded", function() {
+  navigator.mediaDevices.getUserMedia({audio: true})
+  .then(function(stream) {
+    // Microphone access granted
+    console.log("Microphone access granted");
+  })
+  .catch(function(err) {
+    // Microphone access denied or error occurred
+    console.error("Microphone access denied or error occurred:", err);
+  });
+});
 
 // Arrays for greetings and jokes
 const hello = ["Hello human! What's up?", "Hi, how are you doing?", "What's up?", "Ahoy matey! How are ye?", "What's shaking?"];
