@@ -3,6 +3,10 @@ const twiterPrompt = "open twitter with username anyusername";
 const youtubePrompt = "open youtube and search youtubesearch";
 const spotifyPrompt = "open spotify and play songname/artist";
 
+const spotifyClientId = "6362a06b6de443ebb352da023ac50e87";
+const spotifyClientSecret = "6b6cad4e353c42158a8954b2bcc8c9cf";
+const googleKey = "AIzaSyDRiEU6-hvpWsrR1Gg0tkLtJXM-wFNyvuU";
+
 const getTwitterUsername = (str) => {
   const usernameRegex = /username\s+(\w+)/i;
   const match = str.match(usernameRegex);
@@ -148,89 +152,310 @@ submitManualBtn.addEventListener("click", () => {
   }
 });
 // Processor function
+// Existing functions like getTwitterUsername, getYoutubeQuery, etc.
+
+// Updated processor function with dynamic handling for open commands and general search
 function process(text) {
   let response = null;
 
   if (text.includes("hello") || text === "hi" || text.includes("hey")) {
     response = getRandomItemFromArray(hello);
-  } else if (text.includes("yourname")) {
+  } else if (text.includes("your name")) {
     response = "My name's Soai.";
-  } else if (text.includes("howareyou") || text.includes("whatsup")) {
+  } else if (text.includes("how are you") || text.includes("what's up")) {
     response = "I'm fine. How about you?";
-  } else if (text.includes("whattimeisit")) {
+  } else if (text.includes("what time is it")) {
     response = new Date().toLocaleTimeString();
   } else if (text.includes("joke")) {
     response = getRandomItemFromArray(joke);
   } else if (text.includes("youtube")) {
     const query = getYoutubeQuery(text);
-    response = "Opened it in another tab";
-    if (query) {
-      window.open(
-        `https://www.youtube.com/results?search_query=${query}`,
-        "_blank",
-        "noopener"
-      );
-    } else {
-      window.open(`https://www.youtube.com/`, "_blank", "noopener");
-    }
+    response = "Opening the latest video ...";
+    const apiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${query}&key=${googleKey}`;
+
+    fetch(apiUrl)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Failed to fetch search results");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        data.items.forEach((item) => {
+          const videoId = item.id.videoId;
+          const videoTitle = item.snippet.title;
+          const videoLink = `https://www.youtube.com/watch?v=${videoId}`;
+        });
+
+        window.open(
+          `https://www.youtube.com/watch?v=${
+            data.items[0].id.kind === "youtube#video"
+              ? data.items[0].id.videoId
+              : data.items[1].id.kind === "youtube#video"
+              ? data.items[1].id.videoId
+              : data.items[2].id.videoId
+          }`,
+          "_blank",
+          "noopener"
+        );
+      })
+      .catch((error) => {
+        response = "No video or channel found";
+        console.error("Error searching YouTube:", error);
+      });
   } else if (text.includes("flip") && text.includes("coin")) {
     response = Math.random() < 0.5 ? "heads" : "tails";
-  } else if (text.includes("bye") || text.includes("stop")) {
-    response = "Bye!!";
-    toggleRecognition();
-  } else if (
-    text.includes("twitter") ||
-    (text.includes("twitter") && text.includes("post")) ||
-    text.includes("tweet")
-  ) {
-    const username = getTwitterUsername(text);
-    response = "Opened it in another tab";
-    if (username) {
-      window.open(
-        `https://twitter.com/search?q=${username}&src=typed_query&f=top`,
-        "_blank",
-        "noopener"
-      );
-    } else {
-      window.open(`https://twitter.com/`, "_blank", "noopener");
-    }
-  } else if (
-    text.includes("spotify") ||
-    text.includes("music") ||
-    text.includes("play")
-  ) {
-    const query = getSpotifyQuery(text);
-    response = "Opened it in another tab";
-    if (query) {
-      window.open(
-        `https://open.spotify.com/search/${query}`,
-        "_blank",
-        "noopener"
-      );
-    } else {
-      window.open("https://open.spotify.com/", "_blank", "noopener");
-    }
-  } else if (text.includes("open soai on dexscreener")) {
-    response = "Opening SOAI on Dexscreener";
-    window.open(
-      "https://dexscreener.com/ethereum/0x88a3a913626803261de234c23c76523699caed8d",
-      "_blank",
-      "noopener"
-    );
   }
+  // else if (text.includes("bye") || text.includes("stop")) {
+  //   response = "Bye!!";
+  //   toggleRecognition();
+  // }
+  else if (text.includes("twitter")) {
+    const username = getTwitterUsername(text);
+    response = "Opened Twitter in another tab";
+    window.open(`https://twitter.com/${username}`, "_blank", "noopener");
+  } else if (text.includes("spotify")) {
+    const query = getSpotifyQuery(text);
+    response = "Opening latest track in another tab ...";
 
-  if (!response) {
+    const searchQuery = encodeURIComponent(query);
+    const tokenUrl = "https://accounts.spotify.com/api/token";
+    const searchUrl = `https://api.spotify.com/v1/search?q=${searchQuery}&type=track`;
+
+    fetch(tokenUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization:
+          "Basic " + btoa(spotifyClientId + ":" + spotifyClientSecret),
+      },
+      body: "grant_type=client_credentials",
+    })
+      .then((tokenResponse) => {
+        if (!tokenResponse.ok) {
+          throw new Error("Failed to obtain access token");
+        }
+        return tokenResponse.json();
+      })
+      .then((tokenData) => {
+        const accessToken = tokenData.access_token;
+
+        // Search for tracks
+        return fetch(searchUrl, {
+          headers: {
+            Authorization: "Bearer " + accessToken,
+          },
+        });
+      })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Failed to search for tracks");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        // Extract track IDs
+        const trackIds = data.tracks.items.map((item) => item.id);
+        window.open(
+          `https://open.spotify.com/track/${trackIds[0]}`,
+          "_blank",
+          "noopener"
+        );
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        response = "No song or artist found";
+        throw new Error("Failed to search for tracks");
+      });
+  } else if (text.includes("open uniswap")) {
+    response = "Opening Uniswap";
+    window.open("https://app.uniswap.org/#/swap", "_blank", "noopener");
+  } else if (text.includes("tradingview")) {
+    response = "Opened TradingView in another tab";
     window.open(
-      `http://google.com/search?q=${encodeURIComponent(
-        text.replace("search", "")
-      )}`,
+      `https://www.tradingview.com/chart/?symbol=UNISWAP%3ASOAIWETH`,
       "_blank",
       "noopener"
     );
-    return `I found some information for ${text}`;
+  } else if (text.includes("dexscreener")) {
+    const tokenAddress = getTokenAddress(text);
+    response = "Opened token on DexScreener in another tab";
+    window.open(
+      `https://dexscreener.com/ethereum/${tokenAddress}`,
+      "_blank",
+      "noopener"
+    );
+  } else if (text.includes("open")) {
+    // Handle dynamic open commands
+    response = dynamicOpenCommand(text);
+  } else {
+    // General search for unrecognized commands
+    const searchText = text;
+    initiateGeneralSearch(searchText);
+    response = `Initiating a search for: ${text}`;
   }
 
   return response;
+}
+
+function dynamicOpenCommand(text) {
+  const url = getUrlFromText(text);
+  window.open(url, "_blank", "noopener");
+  return `Opened ${url} in another tab.`;
+}
+
+function getTokenAddress(text) {
+  // Extract the token address from the user's input. This is a placeholder function.
+  // You'll need to replace this logic with actual token address extraction based on the input format.
+  const match = text.match(/address ([0-9a-zA-Z]+)/);
+  return match ? match[1] : "default-token-address";
+}
+
+function getUrlFromText(text) {
+  // Extract or construct the URL from the text. This is a placeholder.
+  // Implement the actual logic based on expected text input.
+  return "https://example.com";
+}
+
+// Dynamic handling for "open" commands
+function dynamicOpenCommand(text) {
+  const commandParts = text.split(" ");
+  const actionIndex = commandParts.findIndex(
+    (part) => part.toLowerCase() === "open"
+  );
+
+  if (actionIndex !== -1 && commandParts.length > actionIndex + 1) {
+    const target = commandParts.slice(actionIndex + 1).join(" ");
+    const knownSites = {
+      // Existing known sites
+      
+      uniswap: "https://app.uniswap.org/#/swap", // Add Uniswap URL
+    };
+
+    if (knownSites[target.toLowerCase()]) {
+      window.open(knownSites[target.toLowerCase()], "_blank", "noopener");
+      return `Opened ${target} in another tab.`;
+    } else if (target.toLowerCase().startsWith("swap")) {
+      // Handle Uniswap swap command
+      const tokens = commandParts.slice(actionIndex + 2);
+      if (tokens.length >= 3) {
+        const inputToken = tokens[0];
+        const outputToken = tokens[1];
+        const amount = tokens[2];
+
+        const inputTokenAddress = getTokenAddress(inputToken);
+        const outputTokenAddress = getTokenAddress(outputToken);
+
+        if (inputTokenAddress && outputTokenAddress) {
+          // Call the swapTokens function
+          swapTokens(inputTokenAddress, outputTokenAddress, amount)
+            .then(() => console.log('Swap successful'))
+            .catch(err => console.error('Swap failed:', err));
+
+          return `Initiated swap from ${inputToken} to ${outputToken}.`;
+        } else {
+          return "Invalid token addresses.";
+        }
+      } else {
+        return "Insufficient parameters for swap command.";
+      }
+    } else {
+      initiateGeneralSearch(target);
+      return `Opened search for ${target} in another tab.`;
+    }
+  } else {
+    return "I'm not sure how to handle that command.";
+  }
+}
+const swapTokens = async (inputToken, outputToken, amount) => {
+  const accounts = await web3.eth.getAccounts();
+  const account = accounts[0];
+
+  const inputTokenContract = new web3.eth.Contract(ERC20ABI, inputToken);
+  const allowance = await inputTokenContract.methods.allowance(account, uniswapAddress).call();
+
+  if (allowance < amount) {
+    await inputTokenContract.methods.approve(uniswapAddress, amount).send({ from: account });
+  }
+
+  await uniswapContract.methods.swapExactTokensForTokens(
+    amount,
+    0, // Min amount of output tokens (set to 0 for exact output)
+    [inputToken, outputToken],
+    account,
+    Date.now() + 1000 * 60 * 10 // Deadline (10 minutes from now)
+  ).send({ from: account });
+};
+
+
+  if (actionIndex !== -1 && commandParts.length > actionIndex + 1) {
+    const target = commandParts.slice(actionIndex + 1).join(" ");
+    const knownSites = {
+      // Predefined known sites
+      binance: "https://www.binance.com",
+      metamask: "https://metamask.io",
+      whatsapp: "https://web.whatsapp.com",
+      mail: "https://mail.google.com/mail/",
+      hulu:"www.hulu.com",
+      netflix:"https://www.netflix.com",
+      Dexscreener:"https://dexscreener.com/"
+      
+
+      // Add other known sites as needed
+    };
+
+    if (knownSites[target.toLowerCase()]) {
+      window.open(knownSites[target.toLowerCase()], "_blank", "noopener");
+      return `Opened ${target} in another tab.`;
+    } else {
+      initiateGeneralSearch(target);
+      return `Opened search for ${target} in another tab.`;
+    }
+  } else {
+    return "I'm not sure how to handle that command.";
+  }
+}
+
+function dynamicOpenHuluContent(text) {
+  const commandParts = text.split(" ");
+  const actionIndex = commandParts.findIndex(
+    (part) => part.toLowerCase() === "open"
+  );
+
+  if (actionIndex !== -1 && commandParts.length > actionIndex + 2) {
+    const contentType = commandParts[actionIndex + 1].toLowerCase();
+    const contentName = commandParts.slice(actionIndex + 2).join(" ");
+
+    const huluBaseURL = "https://www.hulu.com/";
+    const searchURL = `${huluBaseURL}search/`;
+
+    if (contentType === "game" || contentType === "movie") {
+      // Since direct links to games or movies might not be possible,
+      // we default to searching for the content on Hulu.
+      const encodedContentName = encodeURIComponent(contentName);
+      const finalURL = `${searchURL}${encodedContentName}`;
+
+      window.open(finalURL, "_blank", "noopener");
+      return `Opened Hulu search for ${contentName}.`;
+    } else {
+      return "Unrecognized content type for Hulu.";
+    }
+  } else {
+    return "I'm not sure how to handle that command.";
+  }
+}
+
+function openDexscreenerProject(projectName) {
+  window.open(
+    `https://dexscreener.com/ethereum/${projectName}`,
+    "_blank",
+    "noopener"
+  );
+  return `Opened Dexscreener for project ${projectName} in another tab.`;
+}
+// Function to perform a general search
+function initiateGeneralSearch(query) {
+  window.open(`https://www.google.com/search?q=${query}`, "_blank", "noopener");
 }
 
 // Helper function to get a random item from an array
@@ -240,31 +465,24 @@ function getRandomItemFromArray(array) {
 
 // Function to read out loud
 function readOutLoud(message) {
-  const speech = new SpeechSynthesisUtterance();
-
-  speech.text = message;
-  speech.volume = 1;
-  speech.rate = 1;
-  speech.pitch = 1.8;
-
-  // Dynamically select a voice
-  const selectedVoice = voices.find(
-    (voice) => voice.name === "Google US English"
-  );
-  if (selectedVoice) {
-    speech.voice = selectedVoice;
-  }
-
-  window.speechSynthesis.speak(speech);
+  // const speech = new SpeechSynthesisUtterance();
+  // speech.text = message;
+  // speech.volume = 3;
+  // speech.rate = 1;
+  // speech.pitch = 1.8;
+  // // Dynamically select a voice
+  // const selectedVoice = voices.find(
+  //   (voice) => voice.name === "Google US English"
+  // );
+  // if (selectedVoice) {
+  //   speech.voice = selectedVoice;
+  // }
+  // window.speechSynthesis.speak(speech);
 }
 // $(document).ready(function () {
 //   requestMic();
 // });
 // Ask for microphone permission when the page loads
-document.addEventListener("DOMContentLoaded", function () {
-  // background.js
-  requestMic();
-});
 
 // Arrays for greetings and jokes
 const hello = [
